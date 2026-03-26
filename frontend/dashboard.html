@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Sistema Jurídico</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="navbar">
+    <h1>⚖️ Sistema Jurídico</h1>
+    <div style="display:flex; gap:24px;">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/processos-page">Processos</a>
+      <a href="/prazos-page">Prazos</a>
+      <a href="#" onclick="sair()">Sair</a>
+    </div>
+</div>
+
+  <div class="container">
+    <!-- Cards de resumo -->
+    <div style="display:flex; gap:16px; margin-bottom:32px;">
+      <div class="card" style="flex:1; padding:24px; text-align:center;">
+        <h2 id="total-clientes">0</h2>
+        <p style="margin:0;">Clientes</p>
+      </div>
+      <div class="card" style="flex:1; padding:24px; text-align:center;">
+        <h2 id="total-processos">0</h2>
+        <p style="margin:0;">Processos</p>
+      </div>
+      <div class="card" style="flex:1; padding:24px; text-align:center;">
+        <h2 id="total-prazos">0</h2>
+        <p style="margin:0;">Prazos pendentes</p>
+      </div>
+    </div>
+
+    <!-- Clientes -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h2>Clientes</h2>
+      <button class="btn btn-primary" style="width:auto; padding:10px 20px;" onclick="abrirFormCliente()">+ Novo cliente</button>
+    </div>
+
+    <div id="form-cliente" style="display:none; background:white; padding:24px; border-radius:12px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <h2>Novo cliente</h2>
+      <label>Nome</label>
+      <input type="text" id="c-nome" placeholder="Nome completo">
+      <label>CPF</label>
+      <input type="text" id="c-cpf" placeholder="000.000.000-00">
+      <label>Email</label>
+      <input type="email" id="c-email" placeholder="email@email.com">
+      <label>Telefone</label>
+      <input type="text" id="c-telefone" placeholder="(00) 00000-0000">
+      <button class="btn btn-primary" style="width:auto; padding:10px 20px;" onclick="criarCliente()">Salvar</button>
+      <button class="btn btn-secondary" style="width:auto; padding:10px 20px;" onclick="fecharFormCliente()">Cancelar</button>
+    </div>
+
+    <table id="tabela-clientes">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>CPF</th>
+          <th>Email</th>
+          <th>Telefone</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-clientes"></tbody>
+    </table>
+
+    <br><br>
+
+    <!-- Prazos -->
+    <h2 style="margin-bottom:16px;">Próximos prazos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Data limite</th>
+          <th>Processo</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-prazos"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login';
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    };
+
+    async function carregarDados() {
+      const [clientes, processos, prazos] = await Promise.all([
+        fetch('/clientes').then(r => r.json()),
+        fetch('/processos').then(r => r.json()),
+        fetch('/prazos/proximos').then(r => r.json())
+      ]);
+
+      document.getElementById('total-clientes').textContent = clientes.length;
+      document.getElementById('total-processos').textContent = processos.length;
+      document.getElementById('total-prazos').textContent = prazos.length;
+
+      const corpoClientes = document.getElementById('corpo-clientes');
+      corpoClientes.innerHTML = '';
+      clientes.forEach(c => {
+        corpoClientes.innerHTML += `
+          <tr>
+            <td>${c.nome}</td>
+            <td>${c.cpf}</td>
+            <td>${c.email || '-'}</td>
+            <td>${c.telefone || '-'}</td>
+          </tr>`;
+      });
+
+      const corpoPrazos = document.getElementById('corpo-prazos');
+      corpoPrazos.innerHTML = '';
+      prazos.forEach(p => {
+        corpoPrazos.innerHTML += `
+          <tr>
+            <td>${p.descricao}</td>
+            <td>${p.data_limite}</td>
+            <td>#${p.processo_id}</td>
+          </tr>`;
+      });
+    }
+
+    function abrirFormCliente() {
+      document.getElementById('form-cliente').style.display = 'block';
+    }
+
+    function fecharFormCliente() {
+      document.getElementById('form-cliente').style.display = 'none';
+    }
+
+    async function criarCliente() {
+      const res = await fetch('/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: document.getElementById('c-nome').value,
+          cpf: document.getElementById('c-cpf').value,
+          email: document.getElementById('c-email').value,
+          telefone: document.getElementById('c-telefone').value
+        })
+      });
+
+      if (res.ok) {
+        fecharFormCliente();
+        carregarDados();
+      } else {
+        alert('Erro ao criar cliente!');
+      }
+    }
+
+    function sair() {
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    }
+
+    carregarDados();
+  </script>
+</body>
+</html>

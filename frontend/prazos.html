@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prazos — Sistema Jurídico</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="navbar">
+    <h1>⚖️ Sistema Jurídico</h1>
+    <div style="display:flex; gap:24px;">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/processos">Processos</a>
+      <a href="/prazos">Prazos</a>
+      <a href="#" onclick="sair()">Sair</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h2>Prazos</h2>
+      <button class="btn btn-primary" style="width:auto; padding:10px 20px;" onclick="abrirForm()">+ Novo prazo</button>
+    </div>
+
+    <div id="form-prazo" style="display:none; background:white; padding:24px; border-radius:12px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <h2>Novo prazo</h2>
+      <label>Descrição</label>
+      <input type="text" id="pr-descricao" placeholder="Ex: Prazo para contestação">
+      <label>Data limite</label>
+      <input type="date" id="pr-data">
+      <label>Processo</label>
+      <select id="pr-processo"></select>
+      <br><br>
+      <button class="btn btn-primary" style="width:auto; padding:10px 20px;" onclick="criarPrazo()">Salvar</button>
+      <button class="btn btn-secondary" style="width:auto; padding:10px 20px;" onclick="fecharForm()">Cancelar</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Data limite</th>
+          <th>Processo</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-prazos"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login';
+
+    let processos = [];
+
+    async function carregarDados() {
+      const [prazos, processosRes] = await Promise.all([
+        fetch('/prazos').then(r => r.json()),
+        fetch('/processos').then(r => r.json())
+      ]);
+
+      processos = processosRes;
+
+      const select = document.getElementById('pr-processo');
+      select.innerHTML = '';
+      processos.forEach(p => {
+        select.innerHTML += `<option value="${p.id}">${p.numero}</option>`;
+      });
+
+      const corpo = document.getElementById('corpo-prazos');
+      corpo.innerHTML = '';
+      const hoje = new Date().toISOString().split('T')[0];
+      prazos.forEach(p => {
+        const processo = processos.find(pr => pr.id === p.processo_id);
+        const atrasado = p.data_limite < hoje && p.concluido === 0;
+        corpo.innerHTML += `
+          <tr>
+            <td>${p.descricao}</td>
+            <td style="color:${atrasado ? '#c00' : '#333'}">${p.data_limite}</td>
+            <td>${processo ? processo.numero : '-'}</td>
+            <td>${p.concluido ? '✅ Concluído' : atrasado ? '⚠️ Atrasado' : '🕐 Pendente'}</td>
+          </tr>`;
+      });
+    }
+
+    function abrirForm() {
+      document.getElementById('form-prazo').style.display = 'block';
+    }
+
+    function fecharForm() {
+      document.getElementById('form-prazo').style.display = 'none';
+    }
+
+    async function criarPrazo() {
+      const res = await fetch('/prazos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          descricao: document.getElementById('pr-descricao').value,
+          data_limite: document.getElementById('pr-data').value,
+          processo_id: parseInt(document.getElementById('pr-processo').value)
+        })
+      });
+
+      if (res.ok) {
+        fecharForm();
+        carregarDados();
+      } else {
+        alert('Erro ao criar prazo!');
+      }
+    }
+
+    function sair() {
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    }
+
+    carregarDados();
+  </script>
+</body>
+</html>

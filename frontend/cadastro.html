@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Sistema Jurídico</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="card-center">
+    <div class="card">
+      <h1 style="text-align:center;">⚖️ Criar conta</h1>
+      <br>
+      <div class="erro" id="erro"></div>
+      <div class="sucesso" id="sucesso"></div>
+      <label>Nome completo</label>
+      <input type="text" id="nome" placeholder="Seu nome">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="seu@email.com">
+      <label>Senha</label>
+      <input type="password" id="senha" placeholder="••••••••">
+      <button class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
+      <div class="link">Já tem conta? <a href="/login">Entrar</a></div>
+    </div>
+  </div>
+  <script>
+    async function cadastrar() {
+      const nome = document.getElementById('nome').value;
+      const email = document.getElementById('email').value;
+      const senha = document.getElementById('senha').value;
+      const erro = document.getElementById('erro');
+      const sucesso = document.getElementById('sucesso');
+      erro.style.display = 'none';
+      sucesso.style.display = 'none';
+
+      const res = await fetch('/cadastro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, email, senha })
+      });
+
+      if (res.ok) {
+        sucesso.style.display = 'block';
+        sucesso.textContent = 'Conta criada com sucesso! Redirecionando...';
+        setTimeout(() => window.location.href = '/login', 2000);
+      } else {
+        const data = await res.json();
+        erro.style.display = 'block';
+        erro.textContent = data.detail || 'Erro ao cadastrar!';
+      }
+    }
+  </script>
+</body>
+</html>
